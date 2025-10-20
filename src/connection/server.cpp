@@ -1,3 +1,15 @@
+//-------------------------------------------------------
+//
+//
+//              A LUI
+//
+//
+//-------------------------------------------------------
+
+
+
+
+
 #include "../../includes/check.hpp"
 #include "../../includes/server.hpp"
 #include "../../includes/message.hpp"  
@@ -5,6 +17,9 @@
 #include "../../includes/auth.hpp"
 #include "../../includes/commandHandler.hpp"
 #include <iomanip>
+
+
+
 
 //TO DO LIST
 //1 - lancer le serveur (OK)
@@ -138,7 +153,7 @@ void Server::makeServer()
 
     // std::cout << "MDP EST : " << _password << std::endl;
     Auth auth(_password);                                                                                                                 // [AJOUT] Crée un objet Auth pour gérer la demande et la vérification du mot de passe
-    CommandHandler cmdHandler(this);                                                                                                            // [AJOUT] Crée un objet cmdHandler pour gérer les commandes IRC apres l'Auth
+    CommandHandler cmdHandler(this);                                                                                                      // [AJOUT] Crée un objet cmdHandler pour gérer les commandes IRC apres l'Auth
     //std::cout << BLUE << "-- STARTING SERVER LOOP" << RESET << std::endl;
 
     while (true)
@@ -173,7 +188,7 @@ void Server::makeServer()
         //std::cout << "-- calling select with maxfd = " << maxfd << std::endl;
         int activity = select(maxfd + 1, &readfds, NULL, NULL, NULL);
         //std::cout << GREEN << "--- select returned = " << activity << RESET << std::endl;
-        if (activity <= 0)                                                                                                               // [MODIFICATION] j'ai inversé le sens de la condition pour plus de lisibilité
+        if (activity <= 0)
         {
             std::cout << RED << "- SELECT ERROR" << RESET << std::endl;      
 
@@ -193,7 +208,6 @@ void Server::makeServer()
                 Client* clientObj = new Client(newClient);
                 _clients.push_back(clientObj);
 
-                auth.requestPassword(clientObj);                                                                                        // [AJOUT] Envoie le prompt au client
                 //std::cout << GREEN << "--- new client created fd = " << newClient << RESET << std::endl;
                 //std::cout << "---- total clients = " << _clients.size() << std::endl;
             }
@@ -208,7 +222,7 @@ void Server::makeServer()
         for (size_t i = 0; i < _clients.size(); ++i)
         {
             //std::cout << "-- checking client " << i << " fd = " << _clients[i]->getFd() << std::endl;
-            if (!FD_ISSET(_clients[i]->getFd(), &readfds))                                                                              // [MODIFICATION] Idem
+            if (!FD_ISSET(_clients[i]->getFd(), &readfds))
             {
                 std::cout << "--- client " << _clients[i]->getFd() << " has no data" << std::endl;
                 continue;
@@ -230,7 +244,8 @@ void Server::makeServer()
                 //std::cout << "- BUFFER PROCESSING" << std::endl;
                 _clients[i]->addData(std::string(buffer));
 
-                // AUTHENTICATION SECTION                                                                                             // [AJOUT] Authentification début
+                // AUTHENTICATION SECTION                                                                                             // //////////////////////////////////////////////////
+                                                                                                                                        //[AJOUT] Authentification début
                 if (!_clients[i]->isAuthenticated())
                 {
                     std::vector<std::string> messages = _clients[i]->getMessage();
@@ -251,8 +266,6 @@ void Server::makeServer()
                     continue;                                                                                                           // Ne traite pas les commandes tant que le client n’est pas authentifié
                 }                                                                                                                       // Authentification fin
 
-                // PARSING SECTION
-                // parseMessage(std::string(buffer));                                                                                   // [À SUPPRIMER] OUTDATED, j'ai fait mon propre parsing
 
                 //                                                                                                                      // [AJOUT]
                 std::vector<std::string> messages = _clients[i]->getMessage();                                                          // Récupère le message
@@ -260,6 +273,9 @@ void Server::makeServer()
                     cmdHandler.handleCommand(_clients[i], messages[j]);                                                                 // [BRACHEMENT] Lien vers mon code, gestion des commandes
                 _clients[i]->clearBuffer();
                 printClients();
+                                                                                                                                        ////////////////////////////////////////////////////////////
+
+
 
                 // SEND SECTION
                 //std::cout << "- SEND RESPONSE" << std::endl;
@@ -314,6 +330,7 @@ void Server::closePort()
 }
 
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ----- Channel functions -----
 
 // Finds a Channel by its name
@@ -341,7 +358,6 @@ void Server::addChannel(Channel* ch)
 {
     _channels.push_back(ch);
 }
-
 
 
 
@@ -390,3 +406,5 @@ void Server::printClients() const
 
     std::cout << "=================================================" << std::endl;
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -1,35 +1,81 @@
-NAME = ircserv
-TEST_NAME = run_tests
-CC = c++
-CFLAGS = -Wall -Werror -Wextra -std=c++98 -fsanitize=address
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    Makefile                                           :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2024/10/07 15:29:20 by nihamdan          #+#    #+#              #
+#    Updated: 2025/10/28 02:12:35 by chuchard         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
 
-SRCS = src/main.cpp src/parsing/check.cpp src/parsing/message.cpp src/connection/server.cpp src/connection/client.cpp src/connection/auth.cpp src/commands/commandHandler.cpp src/commands/channel.cpp
+RED		=	\033[31m
+GRE		=	\033[32m
+BLU		=	\033[36m
+YEL		=	\033[33m
+EOC		=	\033[0m
+BEI		=	\033[38;5;223m
 
-TEST_SRCS = tests/test.cpp tests/testing.cpp src/parsing/check.cpp
+DEF		=	\033[0m
+BOLD	=	\033[1m
+CUR		=	\033[3m
+UL		=	\033[4m
+UP		=	\033[A
 
-OBJS = $(SRCS:.cpp=.o)
-TEST_OBJS = $(TEST_SRCS:.cpp=.o)
+NAME 			= ft_irc
 
-all: $(NAME)
+SOURCES			=	./sources
+INCLUDES		=	./includes
+OBJECTS			=	./bin
 
-$(NAME): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(NAME)
+SRCS 			=	main.cpp client.cpp server.cpp channel.cpp commandHandler.cpp
 
-test: $(TEST_NAME)
-	./$(TEST_NAME)
+OBJS			=	$(addprefix ${OBJECTS}/, $(SRCS:.cpp=.o))
 
-$(TEST_NAME): $(TEST_OBJS)
-	$(CC) $(CFLAGS) $(TEST_OBJS) -o $(TEST_NAME)
+CFLAGS			=	-Wall -Wextra -Werror -std=c++98
+CC				=	c++
+CINCLUDES		=	-I ${INCLUDES}
+CDEPENDENCIES	=
+# ---------------------------------------------------------------------------- #
 
-%.o: %.cpp
-	$(CC) $(CFLAGS) -I includes -c $< -o $@
+SRCS_COUNT = 0
+SRCS_TOT = ${shell find ./sources/ -type f -name '*.cpp' | wc -l}
+SRCS_PRCT = ${shell expr 100 \* ${SRCS_COUNT} / ${SRCS_TOT}}
+BAR =  ${shell expr 23 \* ${SRCS_COUNT} / ${SRCS_TOT}}
+
+${OBJECTS}/%.o: ${SOURCES}/%.cpp
+	@${eval SRCS_COUNT = ${shell expr ${SRCS_COUNT} + 1}}
+	@mkdir -p $(dir $@)
+	@${CC} ${CFLAGS} -o $@ -c $< ${CINCLUDES}
+	@echo ""
+	@echo "\r\033[K -> Compilation de ""$(YEL)${notdir $<}$(EOC). ⏳"
+	@printf "   ${BEI}[%-23.${BAR}s] [%d/%d (%d%%)]${DEF}" "***********************" ${SRCS_COUNT} ${SRCS_TOT} ${SRCS_PRCT}
+	@echo "${UP}${UP}${UP}"
+
+all: start ${NAME}
+
+start:
+	@if [ ! -e "bin" ]; then \
+		echo "🚀 Début de la compilation de $(BLU)${NAME} 🚀$(EOC)"; \
+	else \
+		echo "make: Nothing to be done for \`all'."; \
+	fi
+
+${NAME}: ${OBJS}
+	@clear
+	@${CC} ${CFLAGS} -o ${NAME} ${OBJS}
+	@echo "$(GRE)✅ Compilation terminée.$(EOC)"
 
 clean:
-	rm -f $(OBJS) $(TEST_OBJS)
+	@echo "🗑  $(RED)Supression des fichiers binaires (.o).$(EOC) 🗑"
+	@rm -rf ${OBJECTS}
 
 fclean: clean
-	rm -f $(NAME) $(TEST_NAME)
+	@echo "🗑  $(RED)Supression des executables et librairies.$(EOC) 🗑"
+	@rm -f ${NAME}
+	@clear
 
 re: fclean all
 
-.PHONY: all clean fclean re test
+.PHONY:	all clean fclean re

@@ -1,45 +1,52 @@
-#ifndef SERVER_HPP
-# define SERVER_HPP
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   server.hpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/10/26 23:06:30 by nihamdan          #+#    #+#             */
+/*   Updated: 2025/10/28 03:11:51 by chuchard         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
-#include "check.hpp"
+#ifndef SERVER_HPP
+#define SERVER_HPP
+
+#include <vector>
 #include <string>
-#include <iostream>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h> 
-#include "client.hpp"
-#include "channel.hpp"
+
+class Client;
+class Channel;
 
 class Server
 {
-    private:
-        int _port;
-        std::string _password;
-        int _socket;
-        std::vector<Client*> _clients;
-        std::vector<Channel*> _channels;                                        // [AJOUTÉ] Liste de tous les channels
+	private:
+    	int _serverFd;
+    	int _port;
+    	std::vector<Client*> _clients;
+    	std::vector<Channel*> _channels;
 
-    public:
-        Server();
-        Server(int port, const std::string &password);
-        ~Server();
-        Server(const Server &copy);
-        Server& operator=(const Server &copy);
+    	void makeServerSocket();
+    	void addNewClient();
+    	void dropClient(int fd);
+    	void handleReadable(int fd);
 
-        void makeSocket();
-        void exec();
-        const std::vector<Client*>& getClients() const;                         // [MODIFICATION] Décommenté et modifié pour CommandHandler
+	public:
+    	std::string _password;
+    	Server(int port, const std::string& password);
+    	~Server();
 
-        void parseMessage(const std::string &input);
+    	void run();
 
-        void makeServer();
-        void closePort();
+    	const std::vector<Client*>& getClients() const;
+    	Client* getClientByNick(const std::string& nickname) const;
+    	Channel* getChannelByName(const std::string& name) const;
+    	void addChannel(Channel* ch);
+    	void printClients() const;
+		void printChannelInfo(const Channel* ch) const;
 
-        Client* getClientByNick(const std::string& nickname) const;             // [AJOUTÉ] Trouve un client
-        Channel* getChannelByName(const std::string& name) const;               // [AJOUTÉ] Trouve un channel
-        void addChannel(Channel* ch);                                           // [AJOUTÉ] Crée un nouveau channel
-
-        void printClients() const;                                              // [AJOUTÉ] fonction debug pour print les clients actuels
 };
 
 #endif
+

@@ -23,6 +23,7 @@ private:
     std::vector<std::string> split(const std::string& line) const;
 
     // Basic commands
+    void cmdPass(Client* client, const std::vector<std::string>& args);
     void cmdNick(Client* client, const std::vector<std::string>& args);
     void cmdUser(Client* client, const std::vector<std::string>& args);
     void cmdJoin(Client* client, const std::vector<std::string>& args);

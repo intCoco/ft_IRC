@@ -1,45 +1,53 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   client.hpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/10/26 23:06:45 by nihamdan          #+#    #+#             */
+/*   Updated: 2025/10/28 02:20:19 by chuchard         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
 #include <string>
 #include <vector>
-#include <iostream>
-#include <unistd.h>
-#include "check.hpp"
 
 class Client
 {
-private:
-    int _fd;
-    std::string _inputBuffer;
-    std::string _nickname;
-    std::string _username;
-    bool _authenticated;
-    bool _registered;
+	private:
+    	int         _fd;
+    	std::string _nickname;
+    	std::string _username;
 
-public:
-    Client();
-    ~Client();
-    Client(int fd);
-    Client(const Client& copy);
-    Client& operator=(const Client& copy);
-    
-    int getFd() const;
-    const std::string& getNickname() const;
-    const std::string& getUsername() const;
-    bool isAuthenticated() const;
-    bool isRegistered() const;
-    
-    void setNickname(const std::string& nick);
-    void setUsername(const std::string& user);
-    void setAuthenticated(bool auth);
-    void setRegistered(bool reg);
-    
-    void addData(const std::string& data);
-    std::vector<std::string> getMessage();
-    bool hasCompleteMessage() const;
-    void clearBuffer();
-    std::string getPrefix() const;
+	public:
+    	std::string _bufferIn;
+    	bool        _authenticated;
+    	bool        _registered;
+    	Client(int fd);
+    	~Client();
+
+    	int getFd() const;
+
+    	void setNickname(const std::string& nick);
+    	void setUsername(const std::string& user);
+
+    	const std::string& getNickname() const;
+    	const std::string& getUsername() const;
+
+    	void setAuthenticated(bool ok);
+    	bool isAuthenticated() const;
+
+    	void setRegistered(bool ok);
+    	bool isRegistered() const;
+
+    	void appendToBuffer(const char* data, size_t len);
+    	bool extractLine(std::string& out);
+
+    	std::vector<std::string> getMessage();
 };
 
 #endif

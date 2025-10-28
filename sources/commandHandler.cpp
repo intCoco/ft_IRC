@@ -1,10 +1,11 @@
-#include "../../includes/commandHandler.hpp"
-#include "../../includes/errors.hpp"
+#include "../includes/commandHandler.hpp"
+#include "../includes/errors.hpp"
 #include <iostream>
 #include <sstream>
 #include <sys/socket.h>
 #include <cctype>
 #include <cstring>
+#include <stdlib.h>
 
 CommandHandler::CommandHandler(Server* server) : _server(server) {}
 CommandHandler::CommandHandler(const CommandHandler& other) { (void)other; }
@@ -69,16 +70,23 @@ void CommandHandler::handleCommand(Client* client, const std::string& line)
         return;
 
     std::string cmd = tokens[0];
-    for (size_t i = 0; i < cmd.size(); ++i) // put everything in upper case to allow different letter cases
-        cmd[i] = std::toupper(cmd[i]);
+    // for (size_t i = 0; i < cmd.size(); ++i) // put everything in upper case to allow different letter cases
+    //     cmd[i] = std::toupper(cmd[i]);
 
+    if (!client->isAuthenticated() && cmd != "PASS")
+    {
+        send(client->getFd(), "Error: you must enter the password first\r\n", 42, 0);
+        return;
+    }
     if (!client->isRegistered() && cmd != "NICK" && cmd != "USER" && cmd != "PASS") // Forces registration before continuing
     {
         send(client->getFd(), ERR_NOTREGISTERED, strlen(ERR_NOTREGISTERED), 0);
         return;
     }
 
-    if (cmd == "NICK")
+    if (cmd == "PASS")
+        cmdPass(client, tokens);
+    else if (cmd == "NICK")
         cmdNick(client, tokens);
     else if (cmd == "USER")
         cmdUser(client, tokens);
@@ -107,6 +115,39 @@ void CommandHandler::handleCommand(Client* client, const std::string& line)
 // Each function handles a basic IRC command
 
 
+
+// Handles PASS command
+void CommandHandler::cmdPass(Client* client, const std::vector<std::string>& args)
+{
+    if (!client->isAuthenticated())
+    {
+        for (size_t j = 1; j < args.size(); ++j) {
+
+            std::string trimmed = args[j];
+
+            if (!trimmed.empty() && trimmed[trimmed.size() - 1] == '\n')
+                trimmed.erase(trimmed.size() - 1, 1);
+            if (!trimmed.empty() && trimmed[trimmed.size() - 1] == '\r')
+                trimmed.erase(trimmed.size() - 1, 1);
+
+            if (trimmed == this->_server->_password)
+            {
+                client->setAuthenticated(true);
+                std::string ok = "Password correct. Welcome!\r\n";
+                send(client->getFd(), ok.c_str(), ok.size(), 0);
+                _server->printClients();
+                return;
+            }
+            else
+            {
+                std::string fail = "Password incorrect. Try again.\r\n";
+                send(client->getFd(), fail.c_str(), fail.size(), 0);
+                return;
+            }
+        }
+    }
+}
+
 // Handles NICK command
 void CommandHandler::cmdNick(Client* client, const std::vector<std::string>& args)
 {
@@ -127,6 +168,7 @@ void CommandHandler::cmdNick(Client* client, const std::vector<std::string>& arg
     client->setNickname(nickname);
     if (!client->getUsername().empty() && !client->isRegistered()) // complete registration
         sendWelcome(client);
+    _server->printClients();
 }
 
 
@@ -148,6 +190,7 @@ void CommandHandler::cmdUser(Client* client, const std::vector<std::string>& arg
     client->setUsername(args[1]);
     if (!client->getNickname().empty() && !client->isRegistered()) // complete registration
         sendWelcome(client);
+    _server->printClients();
 }
 
 
@@ -174,6 +217,7 @@ void CommandHandler::cmdJoin(Client* client, const std::vector<std::string>& arg
         ch->addOperator(client);
         std::string msg = "Joined channel " + channelName + "\r\n";
         send(client->getFd(), msg.c_str(), msg.size(), 0);
+        _server->printChannelInfo(ch);
         return;
     }
 
@@ -206,6 +250,7 @@ void CommandHandler::cmdJoin(Client* client, const std::vector<std::string>& arg
     ch->removeInvited(client);
     std::string msg = "Joined channel " + channelName + "\r\n";
     send(client->getFd(), msg.c_str(), msg.size(), 0);
+    _server->printChannelInfo(ch);
 }
 
 
@@ -294,6 +339,7 @@ void CommandHandler::cmdKick(Client* client, const std::vector<std::string>& arg
     send(client->getFd(), msg.c_str(), msg.size(), 0); // Confirm to operator
     msg = "You've been kicked by " + client->getNickname() + " from " + ch->getName() + "\r\n";
     send(target->getFd(), msg.c_str(), msg.size(), 0); // Inform kicked client
+    _server->printChannelInfo(ch);
 }
 
 
@@ -329,6 +375,7 @@ void CommandHandler::cmdInvite(Client* client, const std::vector<std::string>& a
     ch->addInvite(target); // Add to invitation list
     std::string msg = "Invited " + target->getNickname() + " to " + ch->getName() + "\r\n";
     send(client->getFd(), msg.c_str(), msg.size(), 0);
+    _server->printChannelInfo(ch);
 }
 
 
@@ -365,6 +412,7 @@ void CommandHandler::cmdTopic(Client* client, const std::vector<std::string>& ar
     ch->setTopic(args[2]);
     std::string msg = "Topic changed to: " + args[2] + "\r\n";
     send(client->getFd(), msg.c_str(), msg.size(), 0);
+    _server->printChannelInfo(ch);
 }
 
 
@@ -494,6 +542,7 @@ void CommandHandler::cmdMode(Client* client, const std::vector<std::string>& arg
             send(client->getFd(), ERR_UNKNOWNCOMMAND, strlen(ERR_UNKNOWNCOMMAND), 0); // unsupported mode
         }
     }
+    _server->printChannelInfo(ch);
 }
 
 

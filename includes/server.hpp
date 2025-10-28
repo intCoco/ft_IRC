@@ -6,7 +6,7 @@
 /*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 23:06:30 by nihamdan          #+#    #+#             */
-/*   Updated: 2025/10/28 03:11:51 by chuchard         ###   ########.fr       */
+/*   Updated: 2025/10/28 06:59:26 by chuchard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@ class Server
     	int _port;
     	std::vector<Client*> _clients;
     	std::vector<Channel*> _channels;
+    	std::string _password;
 
     	void makeServerSocket();
     	void addNewClient();
@@ -33,13 +34,13 @@ class Server
     	void handleReadable(int fd);
 
 	public:
-    	std::string _password;
     	Server(int port, const std::string& password);
     	~Server();
 
     	void run();
 
     	const std::vector<Client*>& getClients() const;
+		const std::string getPassword() const;
     	Client* getClientByNick(const std::string& nickname) const;
     	Channel* getChannelByName(const std::string& name) const;
     	void addChannel(Channel* ch);

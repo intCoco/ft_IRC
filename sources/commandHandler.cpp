@@ -130,7 +130,7 @@ void CommandHandler::cmdPass(Client* client, const std::vector<std::string>& arg
             if (!trimmed.empty() && trimmed[trimmed.size() - 1] == '\r')
                 trimmed.erase(trimmed.size() - 1, 1);
 
-            if (trimmed == this->_server->_password)
+            if (trimmed == _server->getPassword())
             {
                 client->setAuthenticated(true);
                 std::string ok = "Password correct. Welcome!\r\n";

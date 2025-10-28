@@ -6,7 +6,7 @@
 /*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 23:07:37 by nihamdan          #+#    #+#             */
-/*   Updated: 2025/10/28 06:53:08 by chuchard         ###   ########.fr       */
+/*   Updated: 2025/10/28 07:01:29 by chuchard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -228,6 +228,7 @@ Channel* Server::getChannelByName(const std::string& name) const
     return NULL;
 }
 
+const std::string Server::getPassword() const { return _password; }
 
 void Server::addChannel(Channel* ch)
 {

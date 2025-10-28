@@ -6,7 +6,7 @@
 /*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 23:07:06 by nihamdan          #+#    #+#             */
-/*   Updated: 2025/10/28 01:58:06 by chuchard         ###   ########.fr       */
+/*   Updated: 2025/10/28 18:13:59 by chuchard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,8 @@ void Client::setUsername(const std::string& user)
 	_username = user;
 }
 
+void Client::setRealname(const std::string& name) { _realname = name; }         // AJOUT
+
 const std::string& Client::getNickname() const
 {
 	return _nickname;
@@ -40,6 +42,8 @@ const std::string& Client::getUsername() const
 {
 	return _username;
 }
+
+const std::string& Client::getRealname() const { return _realname; }            // AJOUT
 
 void Client::setAuthenticated(bool ok)
 {
@@ -97,42 +101,4 @@ bool Client::extractLine(std::string& out)
         return true;
     }
     return false;
-}
-
-
-std::vector<std::string> Client::getMessage()
-{
-    std::vector<std::string> messages;
-    const std::string delimiter = "\n";                                                                                         // [MODIFICATION] ca va pas "\r\n" car ca cherche les deux d'affilé alors que il peut y avoir simplement \n seul quand le client envoie un message. À RÉADAPTER !
-    size_t pos = 0;
-    
-    // std::cout << BLUE << "CLIENT " << _fd << " buffer message = " << RESET << std::endl;
-    
-    std::string debugBuffer = _bufferIn;
-    for (size_t i = 0; i < debugBuffer.length(); ++i)
-    {
-        if (debugBuffer[i] == '\r')
-            debugBuffer.replace(i, 1, "\\r");
-        else if (debugBuffer[i] == '\n')
-            debugBuffer.replace(i, 1, "\\n");
-    }
-    // std::cout << BLUE << "CLIENT " << _fd << " current buffer = '" << debugBuffer << "'" << RESET << std::endl;
-    
-    while ((pos = _bufferIn.find(delimiter)) != std::string::npos)
-    {
-        std::string message = _bufferIn.substr(0, pos);
-
-        if (!message.empty() && message[message.length() - 1] == '\r')
-            message.erase(message.length() - 1);
-            
-        if (!message.empty())
-            messages.push_back(message);
-        
-        _bufferIn.erase(0, pos + 1);
-    }
-
-    // std::cout << BLUE << "CLIENT " << _fd << " OK " << messages.size() 
-            //   << " messages. NEXT = '" << _bufferIn << "'" << RESET << std::endl;
-    
-    return (messages);
 }

@@ -171,27 +171,34 @@ void CommandHandler::cmdNick(Client* client, const std::vector<std::string>& arg
     _server->printClients();
 }
 
-
 // Handles USER command
 void CommandHandler::cmdUser(Client* client, const std::vector<std::string>& args)
 {
-    if (client->isRegistered()) // USER cannot be changed after registration
+    if (client->isRegistered())
     {
         send(client->getFd(), ERR_ALREADYREGISTRED, strlen(ERR_ALREADYREGISTRED), 0);
         return;
     }
 
-    if (args.size() < 2)
+    if (args.size() < 5) // USER <username> <hostname> <servername> :<realname>
     {
         send(client->getFd(), ERR_NEEDMOREPARAMS, strlen(ERR_NEEDMOREPARAMS), 0);
         return;
     }
 
-    client->setUsername(args[1]);
-    if (!client->getNickname().empty() && !client->isRegistered()) // complete registration
+    std::string username = args[1];
+    std::string realname = args[4];
+
+    client->setUsername(username);
+    client->setRealname(realname);
+
+    if (!client->getNickname().empty() && !client->isRegistered())
         sendWelcome(client);
+
     _server->printClients();
 }
+
+
 
 
 // Handles JOIN command

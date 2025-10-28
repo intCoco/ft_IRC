@@ -6,7 +6,7 @@
 /*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 23:06:45 by nihamdan          #+#    #+#             */
-/*   Updated: 2025/10/28 02:20:19 by chuchard         ###   ########.fr       */
+/*   Updated: 2025/10/28 18:12:32 by chuchard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,11 +22,12 @@ class Client
     	int         _fd;
     	std::string _nickname;
     	std::string _username;
-
-	public:
+		std::string _realname;
     	std::string _bufferIn;
     	bool        _authenticated;
     	bool        _registered;
+
+	public:
     	Client(int fd);
     	~Client();
 
@@ -34,9 +35,11 @@ class Client
 
     	void setNickname(const std::string& nick);
     	void setUsername(const std::string& user);
+		void setRealname(const std::string& name);
 
     	const std::string& getNickname() const;
     	const std::string& getUsername() const;
+    	const std::string& getRealname() const;
 
     	void setAuthenticated(bool ok);
     	bool isAuthenticated() const;

@@ -6,7 +6,7 @@
 /*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 23:07:37 by nihamdan          #+#    #+#             */
-/*   Updated: 2025/10/28 07:01:29 by chuchard         ###   ########.fr       */
+/*   Updated: 2025/10/28 18:04:39 by chuchard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -141,17 +141,10 @@ void Server::handleReadable(int fd)
 
     cl->appendToBuffer(buf, (size_t)n);
 
-    // std::string line;
-    // while (cl->extractLine(line))
-	// {
-    //     std::cout << "[fd " << fd << "] line received: " << line << std::endl;
-	// 	// a voir si je l'imprime ou si tu veux directement parser avec ton split et l'imprimer ensuite (donc la stocké)    
-    // }
-
-    CommandHandler cmdHandler(this);                                            // AJOUT
-    std::vector<std::string> messages = cl->getMessage();                       //
-    for (size_t j = 0; j < messages.size(); ++j)                                //
-        cmdHandler.handleCommand(cl, messages[j]);                              //
+    std::string line;
+    CommandHandler cmdHandler(this);
+    while (cl->extractLine(line))
+        cmdHandler.handleCommand(cl, line);
 }
 
 void Server::run()

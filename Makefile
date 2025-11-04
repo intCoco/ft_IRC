@@ -6,7 +6,7 @@
 #    By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/10/07 15:29:20 by nihamdan          #+#    #+#              #
-#    Updated: 2025/10/28 02:12:35 by chuchard         ###   ########.fr        #
+#    Updated: 2025/11/04 15:04:21 by chuchard         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,7 +23,7 @@ CUR		=	\033[3m
 UL		=	\033[4m
 UP		=	\033[A
 
-NAME 			= ft_irc
+NAME 			= ircserv
 
 SOURCES			=	./sources
 INCLUDES		=	./includes

@@ -6,7 +6,7 @@
 /*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 23:07:37 by nihamdan          #+#    #+#             */
-/*   Updated: 2025/10/28 18:04:39 by chuchard         ###   ########.fr       */
+/*   Updated: 2025/11/04 15:36:05 by chuchard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <iomanip>
+#include <algorithm>
 
 static void setNonBlocking(int fd)
 {
@@ -106,6 +107,7 @@ void Server::dropClient(int fd)
             close(fd);
             delete *it;
             _clients.erase(it);
+            printClients();                                                     // AJOUT PRINT LES CLIENT A CHAQUE DECONNECTÉ
             return;
         }
     }
@@ -144,7 +146,10 @@ void Server::handleReadable(int fd)
     std::string line;
     CommandHandler cmdHandler(this);
     while (cl->extractLine(line))
-        cmdHandler.handleCommand(cl, line);
+    {
+        // std::cout << line << std::endl;
+        cmdHandler.handleCommand(cl, line);                                     // BRANCHEMENT
+    }
 }
 
 void Server::run()
@@ -190,6 +195,7 @@ const std::vector<Client*>& Server::getClients() const
     return _clients;
 }
 
+// Finds a Client by its nickname
 Client* Server::getClientByNick(const std::string& nickname) const
 {
     for (size_t i = 0; i < _clients.size(); ++i)
@@ -199,18 +205,6 @@ Client* Server::getClientByNick(const std::string& nickname) const
     }
     return NULL;
 }
-
-/*Channel* Server::getChannelByName(const std::string& name) const
-{
-    for (size_t i = 0; i < _channels.size(); ++i)
-	{
-        // mettre ton getname de channel ici, je met un prototype
-        // if (_channels[i]->getName() == name) return _channels[i];
-    }
-    return NULL;
-}*/
-
-//                                                                              // AJOUT A PARTIR D'ICI
 
 // Finds a Channel by its name
 Channel* Server::getChannelByName(const std::string& name) const

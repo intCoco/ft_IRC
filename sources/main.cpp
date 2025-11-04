@@ -6,7 +6,7 @@
 /*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 23:07:44 by nihamdan          #+#    #+#             */
-/*   Updated: 2025/10/28 01:23:15 by chuchard         ###   ########.fr       */
+/*   Updated: 2025/11/04 15:03:53 by chuchard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 {
     if (argc != 3)
 	{
-        std::cerr << "Usage: ./ft_irc <port> <password>\n";
+        std::cerr << "Usage: ./ircserv <port> <password>\n";
         return 1;
     }
     int port = std::atoi(argv[1]);

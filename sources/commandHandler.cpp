@@ -6,6 +6,7 @@
 #include <cctype>
 #include <cstring>
 #include <stdlib.h>
+#include <algorithm>
 
 CommandHandler::CommandHandler(Server* server) : _server(server) {}
 CommandHandler::CommandHandler(const CommandHandler& other) { (void)other; }
@@ -55,6 +56,12 @@ std::vector<std::string> CommandHandler::split(const std::string& line) const
     return tokens;
 }
 
+std::string toLower(const std::string& str)
+{
+    std::string lower = str;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    return lower;
+}
 
 
 
@@ -70,9 +77,17 @@ void CommandHandler::handleCommand(Client* client, const std::string& line)
         return;
 
     std::string cmd = tokens[0];
-    // for (size_t i = 0; i < cmd.size(); ++i) // put everything in upper case to allow different letter cases
-    //     cmd[i] = std::toupper(cmd[i]);
+    for (size_t i = 0; i < cmd.size(); ++i) // put everything in upper case to allow different letter cases
+        cmd[i] = std::toupper(cmd[i]);
 
+    if (tokens.size() >= 2 && cmd == "CAP" && tokens[1] == "LS")
+    {
+        std::string ok = ":ircserv CAP * LS :\r\n";
+        send(client->getFd(), ok.c_str(), ok.size(), 0);
+        return ;
+    }
+    if (line == "JOIN :" || cmd == "CAP")
+        return ;
     if (!client->isAuthenticated() && cmd != "PASS")
     {
         send(client->getFd(), "Error: you must enter the password first\r\n", 42, 0);
@@ -101,7 +116,26 @@ void CommandHandler::handleCommand(Client* client, const std::string& line)
     else if (cmd == "TOPIC")
         cmdTopic(client, tokens);
     else if (cmd == "MODE")
-        cmdMode(client, tokens);
+    {
+        if (tokens[1][0] != '#' && tokens[1] == client->getNickname() && tokens[2] == "+i")
+        {
+            std::string reply = ":ircserv 221 " + client->getNickname() + " +i\r\n";
+            send(client->getFd(), reply.c_str(), reply.size(), 0);
+        }
+        else
+            cmdMode(client, tokens);
+    }
+    else if (cmd == "PING")
+    {
+        std::string response = "PONG";
+        if (tokens.size() >= 2)
+            response += " :" + tokens[1];
+        response += "\r\n";
+
+        send(client->getFd(), response.c_str(), response.size(), 0);
+    }
+    else if (cmd == "WHOIS")
+        return ;
     else
         send(client->getFd(), ERR_UNKNOWNCOMMAND, strlen(ERR_UNKNOWNCOMMAND), 0);
 }
@@ -157,11 +191,25 @@ void CommandHandler::cmdNick(Client* client, const std::vector<std::string>& arg
         return;
     }
 
-    std::string nickname = args[1];
+    std::string nickname = toLower(args[1]);
     if (isNicknameTaken(nickname))
     {
-        std::string msg = "433 " + nickname + " :Nickname is already in use\r\n";
-        send(client->getFd(), msg.c_str(), msg.size(), 0);
+        if (client->isRegistered())
+        {
+            std::string msg = "433 " + nickname + " :Nickname is already in use\r\n";
+            send(client->getFd(), msg.c_str(), msg.size(), 0);
+        }
+        else
+        {
+            std::string newNick = nickname;
+            int i = 1;
+            while (isNicknameTaken(newNick))
+            {
+                newNick = nickname + std::string("_") + static_cast<char>('0' + i);
+                i++;
+            }
+            client->setNickname(newNick);
+        }
         return;
     }
 
@@ -210,7 +258,7 @@ void CommandHandler::cmdJoin(Client* client, const std::vector<std::string>& arg
         return;
     }
 
-    std::string channelName = args[1];
+    std::string channelName = toLower(args[1]);
     std::string keyParam = ""; // optional key param (JOIN #channel key)
     if (args.size() >= 3)
         keyParam = args[2];
@@ -222,8 +270,8 @@ void CommandHandler::cmdJoin(Client* client, const std::vector<std::string>& arg
         _server->addChannel(ch);
         ch->addClient(client);
         ch->addOperator(client);
-        std::string msg = "Joined channel " + channelName + "\r\n";
-        send(client->getFd(), msg.c_str(), msg.size(), 0);
+        std::string joinMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost JOIN :" + channelName + "\r\n";
+        send(client->getFd(), joinMsg.c_str(), joinMsg.size(), 0);
         _server->printChannelInfo(ch);
         return;
     }
@@ -270,7 +318,7 @@ void CommandHandler::cmdPrivmsg(Client* client, const std::vector<std::string>& 
         return;
     }
 
-    std::string targetName = args[1];
+    std::string targetName = toLower(args[1]);
     std::string message = args[2];
 
     bool sent = false;
@@ -279,7 +327,7 @@ void CommandHandler::cmdPrivmsg(Client* client, const std::vector<std::string>& 
     {
         if (clients[i]->getNickname() == targetName) // search target
         {
-            std::string msg = "Private message from " + client->getNickname() + ": " + message + "\r\n";
+            std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost PRIVMSG " + targetName + " :" + message + "\r\n";
             send(clients[i]->getFd(), msg.c_str(), msg.size(), 0);
             sent = true;
             break;
@@ -296,7 +344,7 @@ void CommandHandler::cmdPrivmsg(Client* client, const std::vector<std::string>& 
             {
                 if (chClients[i] != client) // Send to all channel clients except sender
                 {
-                    std::string msg = "Message from " + client->getNickname() + " to channel " + targetName + ": " + message + "\r\n";
+                    std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost PRIVMSG " + targetName + " :" + message + "\r\n";
                     send(chClients[i]->getFd(), msg.c_str(), msg.size(), 0);
                 }
             }
@@ -320,7 +368,7 @@ void CommandHandler::cmdKick(Client* client, const std::vector<std::string>& arg
         return;
     }
 
-    Channel* ch = _server->getChannelByName(args[1]);
+    Channel* ch = _server->getChannelByName(toLower(args[1]));
     if (!ch)
     {
         send(client->getFd(), ERR_NOSUCHCHANNEL, strlen(ERR_NOSUCHCHANNEL), 0);
@@ -333,7 +381,7 @@ void CommandHandler::cmdKick(Client* client, const std::vector<std::string>& arg
         return;
     }
 
-    Client* target = _server->getClientByNick(args[2]);
+    Client* target = _server->getClientByNick(toLower(args[2]));
     if (!target || !ch->hasClient(target)) // Check target exists in channel
     {
         send(client->getFd(), ERR_USERNOTINCHANNEL, strlen(ERR_USERNOTINCHANNEL), 0);
@@ -359,7 +407,7 @@ void CommandHandler::cmdInvite(Client* client, const std::vector<std::string>& a
         return;
     }
 
-    Channel* ch = _server->getChannelByName(args[2]);
+    Channel* ch = _server->getChannelByName(toLower(args[2]));
     if (!ch)
     {
         send(client->getFd(), ERR_NOSUCHCHANNEL, strlen(ERR_NOSUCHCHANNEL), 0);
@@ -372,7 +420,7 @@ void CommandHandler::cmdInvite(Client* client, const std::vector<std::string>& a
         return;
     }
 
-    Client* target = _server->getClientByNick(args[1]);
+    Client* target = _server->getClientByNick(toLower(args[1]));
     if (!target)
     {
         send(client->getFd(), ERR_NOSUCHNICK, strlen(ERR_NOSUCHNICK), 0);
@@ -395,7 +443,7 @@ void CommandHandler::cmdTopic(Client* client, const std::vector<std::string>& ar
         return;
     }
 
-    Channel* ch = _server->getChannelByName(args[1]);
+    Channel* ch = _server->getChannelByName(toLower(args[1]));
     if (!ch)
     {
         send(client->getFd(), ERR_NOSUCHCHANNEL, strlen(ERR_NOSUCHCHANNEL), 0);
@@ -433,7 +481,7 @@ void CommandHandler::cmdMode(Client* client, const std::vector<std::string>& arg
         return;
     }
 
-    std::string channelName = args[1];
+    std::string channelName = toLower(args[1]);
     Channel* ch = _server->getChannelByName(channelName);
     if (!ch)
     {
@@ -501,7 +549,7 @@ void CommandHandler::cmdMode(Client* client, const std::vector<std::string>& arg
                 send(client->getFd(), ERR_NEEDMOREPARAMS, strlen(ERR_NEEDMOREPARAMS), 0);
                 return;
             }
-            Client* target = _server->getClientByNick(args[argIndex++]);
+            Client* target = _server->getClientByNick(toLower(args[argIndex++]));
             if (!target || !ch->hasClient(target))
             {
                 send(client->getFd(), ERR_USERNOTINCHANNEL, strlen(ERR_USERNOTINCHANNEL), 0);
@@ -566,13 +614,12 @@ void CommandHandler::sendWelcome(Client* client)
     send(client->getFd(), msg.c_str(), msg.size(), 0);
 }
 
-
 bool CommandHandler::isNicknameTaken(const std::string& nickname) const
 {
     const std::vector<Client*>& clients = _server->getClients();
     for (size_t i = 0; i < clients.size(); ++i)
     {
-        if (clients[i]->getNickname() == nickname)
+        if (clients[i]->getNickname() == toLower(nickname))
             return true;
     }
     return false;

@@ -6,7 +6,7 @@
 /*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 23:07:37 by nihamdan          #+#    #+#             */
-/*   Updated: 2025/11/04 15:36:05 by chuchard         ###   ########.fr       */
+/*   Updated: 2025/11/06 11:52:40 by chuchard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -115,6 +115,7 @@ void Server::dropClient(int fd)
 
 void Server::handleReadable(int fd)
 {
+    std::cout << "line" << std::endl;
     Client* cl = NULL;
     for (size_t i = 0; i < _clients.size(); ++i)
 	{
@@ -147,7 +148,7 @@ void Server::handleReadable(int fd)
     CommandHandler cmdHandler(this);
     while (cl->extractLine(line))
     {
-        // std::cout << line << std::endl;
+        std::cout << line << std::endl;
         cmdHandler.handleCommand(cl, line);                                     // BRANCHEMENT
     }
 }
@@ -261,7 +262,6 @@ void Server::printClients() const
                   << std::setw(nickWidth) << nick << " | "
                   << std::setw(userWidth) << user << " |" << std::endl;
     }
-
     std::cout << "=================================================" << std::endl;
 }
 
@@ -293,8 +293,11 @@ void Server::printChannelInfo(const Channel* target) const
         std::string topic = ch->getTopic().empty() ? "(none)" : ch->getTopic();
         if (topic.length() > static_cast<size_t>(topicWidth))
             topic = topic.substr(0, topicWidth - 1);
+        std::string name = ch->getName();
+        if (name.length() > static_cast<size_t>(nameWidth))
+            name = name.substr(0, nameWidth - 1);
 
-        std::cout << "| " << std::setw(nameWidth) << ch->getName()
+        std::cout << "| " << std::setw(nameWidth) << name
                   << " | " << std::setw(topicWidth) << topic
                   << " | " << std::setw(modeWidth) << (ch->isModeI() ? "✓" : "")
                   << " | " << std::setw(modeWidth) << (ch->isModeT() ? "✓" : "")

@@ -211,6 +211,7 @@ void CommandHandler::cmdNick(Client* client, const std::vector<std::string>& arg
             client->setNickname(newNick);
         }
         return;
+        _server->printClients();
     }
 
     client->setNickname(nickname);
@@ -529,6 +530,7 @@ void CommandHandler::cmdMode(Client* client, const std::vector<std::string>& arg
                 if (argIndex >= args.size())
                 {
                     send(client->getFd(), ERR_NEEDMOREPARAMS, strlen(ERR_NEEDMOREPARAMS), 0);
+                    _server->printChannelInfo(ch);
                     return;
                 }
                 ch->setKey(args[argIndex++]);
@@ -547,12 +549,14 @@ void CommandHandler::cmdMode(Client* client, const std::vector<std::string>& arg
             if (argIndex >= args.size())
             {
                 send(client->getFd(), ERR_NEEDMOREPARAMS, strlen(ERR_NEEDMOREPARAMS), 0);
+                _server->printChannelInfo(ch);
                 return;
             }
             Client* target = _server->getClientByNick(toLower(args[argIndex++]));
             if (!target || !ch->hasClient(target))
             {
                 send(client->getFd(), ERR_USERNOTINCHANNEL, strlen(ERR_USERNOTINCHANNEL), 0);
+                _server->printChannelInfo(ch);
                 return;
             }
             if (enable)
@@ -575,6 +579,7 @@ void CommandHandler::cmdMode(Client* client, const std::vector<std::string>& arg
                 if (argIndex >= args.size())
                 {
                     send(client->getFd(), ERR_NEEDMOREPARAMS, strlen(ERR_NEEDMOREPARAMS), 0);
+                    _server->printChannelInfo(ch);
                     return;
                 }
                 int limit = atoi(args[argIndex++].c_str());

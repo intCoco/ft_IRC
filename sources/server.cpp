@@ -6,7 +6,7 @@
 /*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 23:07:37 by nihamdan          #+#    #+#             */
-/*   Updated: 2025/11/06 11:52:40 by chuchard         ###   ########.fr       */
+/*   Updated: 2025/11/11 00:38:11 by chuchard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,24 +94,49 @@ void Server::addNewClient()
     _clients.push_back(cl);
 
     std::cout << "New client connected (fd=" << cfd << ")" << std::endl;
-    printClients();                                                             // AJOUT PRINT LES CLIENT A CHAQUE NOUVEAU CONNECTÉ
+    printClients();                                                             // AJOUT PRINT LES CLIENTS A CHAQUE NOUVEAU CONNECTÉ
 }
 
 void Server::dropClient(int fd)
 {
-    for (std::vector<Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
-	{
-        if ((*it)->getFd() == fd)
-		{
-            std::cout << "Client disconnected (fd=" << fd << ")" << std::endl;
-            close(fd);
-            delete *it;
-            _clients.erase(it);
-            printClients();                                                     // AJOUT PRINT LES CLIENT A CHAQUE DECONNECTÉ
-            return;
+    Client* cl = NULL;                                                          // ajout de la deconnexion du channel et de la suppression si channel vide
+    for (size_t i = 0; i < _clients.size(); ++i)
+    {
+        if (_clients[i]->getFd() == fd)
+        {
+            cl = _clients[i];
+            break;
         }
     }
+    if (!cl)
+        return;
+    for (size_t i = 0; i < _channels.size(); )
+    {
+        Channel* ch = _channels[i];
+        if (ch->hasClient(cl))
+            ch->removeClient(cl);
+        if (ch->isEmpty())
+        {
+            delete ch;
+            _channels.erase(_channels.begin() + i);
+        }
+        else
+            ++i;
+    }
+    std::cout << "Client disconnected (fd=" << fd << ")" << std::endl;
+    close(fd);
+    for (std::vector<Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+    {
+        if (*it == cl)
+        {
+            delete cl;
+            _clients.erase(it);
+            break;
+        }
+    }
+    printClients();
 }
+
 
 void Server::handleReadable(int fd)
 {
@@ -148,7 +173,7 @@ void Server::handleReadable(int fd)
     CommandHandler cmdHandler(this);
     while (cl->extractLine(line))
     {
-        std::cout << line << std::endl;
+        // std::cout << line << std::endl;
         cmdHandler.handleCommand(cl, line);                                     // BRANCHEMENT
     }
 }
@@ -195,6 +220,12 @@ const std::vector<Client*>& Server::getClients() const
 {
     return _clients;
 }
+
+const std::vector<Channel*>& Server::getChannels() const
+{
+    return _channels;
+}
+
 
 // Finds a Client by its nickname
 Client* Server::getClientByNick(const std::string& nickname) const
@@ -255,7 +286,7 @@ void Server::printClients() const
             user = user.substr(0, userWidth - 1);
 
         // print each row with padding
-        std::cout << "| " 
+        std::cout << "| "
                   << std::setw(fdWidth) << c->getFd() << " | "
                   << std::setw(authWidth) << (c->isAuthenticated() ? "Yes" : "No") << " | "
                   << std::setw(regWidth) << (c->isRegistered() ? "Yes" : "No") << " | "

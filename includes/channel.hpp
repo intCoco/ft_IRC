@@ -54,6 +54,9 @@ public:
 
     void setLimit(int limit);
     size_t getLimit() const;
+
+    bool isEmpty() const;
+
 };
 
 #endif

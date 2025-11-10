@@ -6,7 +6,7 @@
 /*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 23:06:30 by nihamdan          #+#    #+#             */
-/*   Updated: 2025/10/28 06:59:26 by chuchard         ###   ########.fr       */
+/*   Updated: 2025/11/11 00:37:28 by chuchard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,7 @@ class Server
     	void run();
 
     	const std::vector<Client*>& getClients() const;
+    	const std::vector<Channel*>& getChannels() const;
 		const std::string getPassword() const;
     	Client* getClientByNick(const std::string& nickname) const;
     	Channel* getChannelByName(const std::string& name) const;

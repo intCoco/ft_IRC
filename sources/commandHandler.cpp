@@ -167,14 +167,14 @@ void CommandHandler::cmdPass(Client* client, const std::vector<std::string>& arg
             if (trimmed == _server->getPassword())
             {
                 client->setAuthenticated(true);
-                std::string ok = "Password correct. Welcome!\r\n";
+                std::string ok = ":ircserv NOTICE * :Password accepted\r\n";
                 send(client->getFd(), ok.c_str(), ok.size(), 0);
                 _server->printClients();
                 return;
             }
             else
             {
-                std::string fail = "Password incorrect. Try again.\r\n";
+                std::string fail = ":ircserv 464 " + client->getNickname() + " :Password incorrect\r\n";
                 send(client->getFd(), fail.c_str(), fail.size(), 0);
                 return;
             }
@@ -210,11 +210,12 @@ void CommandHandler::cmdNick(Client* client, const std::vector<std::string>& arg
             }
             client->setNickname(newNick);
         }
-        return;
         _server->printClients();
+        return;
     }
-
     client->setNickname(nickname);
+    std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost NICK :" + nickname + "\r\n";
+    send(client->getFd(), msg.c_str(), msg.size(), 0);
     if (!client->getUsername().empty() && !client->isRegistered()) // complete registration
         sendWelcome(client);
     _server->printClients();
@@ -260,7 +261,7 @@ void CommandHandler::cmdJoin(Client* client, const std::vector<std::string>& arg
     }
 
     std::string channelName = toLower(args[1]);
-    std::string keyParam = ""; // optional key param (JOIN #channel key)
+    std::string keyParam = "";
     if (args.size() >= 3)
         keyParam = args[2];
 
@@ -271,43 +272,98 @@ void CommandHandler::cmdJoin(Client* client, const std::vector<std::string>& arg
         _server->addChannel(ch);
         ch->addClient(client);
         ch->addOperator(client);
-        std::string joinMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost JOIN :" + channelName + "\r\n";
+
+        // INTRO WHEN CREATING CHANNEL
+        std::string joinMsg = ":" + client->getNickname() + "!" + client->getUsername() +
+                              "@localhost JOIN :" + channelName + "\r\n";
         send(client->getFd(), joinMsg.c_str(), joinMsg.size(), 0);
+
+        std::string topicMsg = ":ircserv 332 " + client->getNickname() + " " +
+                               channelName + " :" + ch->getTopic() + "\r\n";
+        send(client->getFd(), topicMsg.c_str(), topicMsg.size(), 0);
+
+        std::string names = ":ircserv 353 " + client->getNickname() + " = " +
+                            channelName + " :@" + client->getNickname() + "\r\n";
+        send(client->getFd(), names.c_str(), names.size(), 0);
+
+        std::string endNames = ":ircserv 366 " + client->getNickname() + " " +
+                               channelName + " :End of /NAMES list\r\n";
+        send(client->getFd(), endNames.c_str(), endNames.size(), 0);
+
         _server->printChannelInfo(ch);
         return;
     }
 
-    // If channel is invite-only and client is not invited and not an operator -> reject
+    // check invite
     if (ch->isModeI() && !ch->isInvited(client) && !ch->isOperator(client))
     {
-        send(client->getFd(), ERR_INVITEONLYCHAN, strlen(ERR_INVITEONLYCHAN), 0);
+        std::string err = ":ircserv 473 " + client->getNickname() + " " +
+                          channelName + " :Cannot join channel (+i)\r\n";
+        send(client->getFd(), err.c_str(), err.size(), 0);
         return;
     }
 
-    // If channel has a password, require correct key param
+    // check pw
     if (!ch->getKey().empty())
     {
         if (keyParam.empty() || keyParam != ch->getKey())
         {
-            send(client->getFd(), ERR_BADCHANNELKEY, strlen(ERR_BADCHANNELKEY), 0);
+            std::string err = ":ircserv 475 " + client->getNickname() + " " +
+                              channelName + " :Cannot join channel (+k)\r\n";
+            send(client->getFd(), err.c_str(), err.size(), 0);
             return;
         }
     }
 
-    // If channel has a user limit and it's full -> reject
+    // check limit
     if (ch->getLimit() > 0 && ch->getClients().size() >= ch->getLimit())
     {
-        send(client->getFd(), ERR_CHANNELISFULL, strlen(ERR_CHANNELISFULL), 0);
+        std::string err = ":ircserv 471 " + client->getNickname() + " " +
+                          channelName + " :Cannot join channel (+l)\r\n";
+        send(client->getFd(), err.c_str(), err.size(), 0);
         return;
     }
 
-    // All checks passed -> join
+    // if already member
+    if (ch->hasClient(client))
+        return;
+
     ch->addClient(client);
     ch->removeInvited(client);
-    std::string msg = "Joined channel " + channelName + "\r\n";
-    send(client->getFd(), msg.c_str(), msg.size(), 0);
+
+    // announcement to everyone
+    std::string joinMsg = ":" + client->getNickname() + "!" + client->getUsername() +
+                          "@localhost JOIN :" + channelName + "\r\n";
+    const std::vector<Client*>& members = ch->getClients();
+    for (size_t i = 0; i < members.size(); ++i)
+        send(members[i]->getFd(), joinMsg.c_str(), joinMsg.size(), 0);
+
+
+    // INTRO WHEN ARRIVING IN CHANNEL
+    std::string topicMsg = ":ircserv 332 " + client->getNickname() + " " +
+                           channelName + " :" + ch->getTopic() + "\r\n";
+    send(client->getFd(), topicMsg.c_str(), topicMsg.size(), 0);
+
+    // names list
+    std::string names = ":ircserv 353 " + client->getNickname() + " = " + channelName + " :";
+    for (size_t i = 0; i < members.size(); ++i)
+    {
+        if (ch->isOperator(members[i]))
+            names += "@" + members[i]->getNickname() + " ";
+        else
+            names += members[i]->getNickname() + " ";
+    }
+    names += "\r\n";
+    send(client->getFd(), names.c_str(), names.size(), 0);
+
+    // end of names list
+    std::string endNames = ":ircserv 366 " + client->getNickname() + " " +
+                           channelName + " :End of /NAMES list\r\n";
+    send(client->getFd(), endNames.c_str(), endNames.size(), 0);
+
     _server->printChannelInfo(ch);
 }
+
 
 
 // Handles PRIVMSG command
@@ -340,6 +396,14 @@ void CommandHandler::cmdPrivmsg(Client* client, const std::vector<std::string>& 
         Channel* ch = _server->getChannelByName(targetName);
         if (ch)
         {
+            // [FIX] Check if sender is in channel
+            if (!ch->hasClient(client))
+            {
+                std::string err = ":ircserv 404 " + client->getNickname() + " " + targetName + " :Cannot send to channel\r\n";
+                send(client->getFd(), err.c_str(), err.size(), 0);
+                return;
+            }
+
             const std::vector<Client*>& chClients = ch->getClients();
             for (size_t i = 0; i < chClients.size(); ++i)
             {
@@ -391,10 +455,13 @@ void CommandHandler::cmdKick(Client* client, const std::vector<std::string>& arg
 
     ch->removeClient(target); // Remove target from channel
 
-    std::string msg = "Kicked " + target->getNickname() + " from " + ch->getName() + "\r\n";
-    send(client->getFd(), msg.c_str(), msg.size(), 0); // Confirm to operator
-    msg = "You've been kicked by " + client->getNickname() + " from " + ch->getName() + "\r\n";
-    send(target->getFd(), msg.c_str(), msg.size(), 0); // Inform kicked client
+    std::string kickMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost KICK " + ch->getName() + " " + target->getNickname() + " :Kicked\r\n";
+
+    const std::vector<Client*>& members = ch->getClients();
+    for (size_t i = 0; i < members.size(); ++i)
+        send(members[i]->getFd(), kickMsg.c_str(), kickMsg.size(), 0); //send to everyone
+    send(target->getFd(), kickMsg.c_str(), kickMsg.size(), 0);
+
     _server->printChannelInfo(ch);
 }
 
@@ -429,8 +496,8 @@ void CommandHandler::cmdInvite(Client* client, const std::vector<std::string>& a
     }
 
     ch->addInvite(target); // Add to invitation list
-    std::string msg = "Invited " + target->getNickname() + " to " + ch->getName() + "\r\n";
-    send(client->getFd(), msg.c_str(), msg.size(), 0);
+    std::string invMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost INVITE " + target->getNickname() + " :" + ch->getName() + "\r\n";
+    send(target->getFd(), invMsg.c_str(), invMsg.size(), 0);
     _server->printChannelInfo(ch);
 }
 
@@ -466,9 +533,16 @@ void CommandHandler::cmdTopic(Client* client, const std::vector<std::string>& ar
     }
 
     ch->setTopic(args[2]);
-    std::string msg = "Topic changed to: " + args[2] + "\r\n";
-    send(client->getFd(), msg.c_str(), msg.size(), 0);
+
+    std::string msg = ":" + client->getNickname() + "!" + client->getUsername() +
+                    "@localhost TOPIC " + ch->getName() + " :" + args[2] + "\r\n";
+
+    const std::vector<Client*>& members = ch->getClients();
+    for (size_t i = 0; i < members.size(); ++i)
+        send(members[i]->getFd(), msg.c_str(), msg.size(), 0);
+
     _server->printChannelInfo(ch);
+
 }
 
 
@@ -510,18 +584,18 @@ void CommandHandler::cmdMode(Client* client, const std::vector<std::string>& arg
         if (c == 'i') // Invite-only
         {
             ch->setModeI(enable);
-            std::string msg = enable ?
-                "Channel " + channelName + " set to invite-only\r\n" :
-                "Channel " + channelName + " is no longer invite-only\r\n";
-            send(client->getFd(), msg.c_str(), msg.size(), 0);
+            std::string modeMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost MODE " + channelName + " " + (enable ? "+" : "-") + c + "\r\n";
+            const std::vector<Client*>& members = ch->getClients();
+            for (size_t i = 0; i < members.size(); ++i)
+                send(members[i]->getFd(), modeMsg.c_str(), modeMsg.size(), 0);
         }
         else if (c == 't') // Topic only by ops (si j'ai bien compris?)
         {
             ch->setModeT(enable);
-            std::string msg = enable ?
-                "Only channel operators may set the topic for " + channelName + "\r\n" :
-                "All users may now set the topic for " + channelName + "\r\n";
-            send(client->getFd(), msg.c_str(), msg.size(), 0);
+            std::string modeMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost MODE " + channelName + " " + (enable ? "+" : "-") + c + "\r\n";
+            const std::vector<Client*>& members = ch->getClients();
+            for (size_t i = 0; i < members.size(); ++i)
+                send(members[i]->getFd(), modeMsg.c_str(), modeMsg.size(), 0);
         }
         else if (c == 'k') // Channel key (password)
         {
@@ -534,15 +608,14 @@ void CommandHandler::cmdMode(Client* client, const std::vector<std::string>& arg
                     return;
                 }
                 ch->setKey(args[argIndex++]);
-                std::string msg = "Password set for channel " + channelName + "\r\n";
-                send(client->getFd(), msg.c_str(), msg.size(), 0);
             }
             else
-            {
                 ch->setKey("");
-                std::string msg = "Password removed for channel " + channelName + "\r\n";
-                send(client->getFd(), msg.c_str(), msg.size(), 0);
-            }
+
+            std::string modeMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost MODE " + channelName + " " + (enable ? "+" : "-") + c + "\r\n";
+            const std::vector<Client*>& members = ch->getClients();
+            for (size_t i = 0; i < members.size(); ++i)
+                send(members[i]->getFd(), modeMsg.c_str(), modeMsg.size(), 0);
         }
         else if (c == 'o') // Set/remove operator
         {
@@ -571,6 +644,10 @@ void CommandHandler::cmdMode(Client* client, const std::vector<std::string>& arg
                 std::string msg = target->getNickname() + " is no longer an operator in " + channelName + "\r\n";
                 send(client->getFd(), msg.c_str(), msg.size(), 0);
             }
+            std::string modeMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost MODE " + channelName + " " + (enable ? "+" : "-") + c + "\r\n";
+            const std::vector<Client*>& members = ch->getClients();
+            for (size_t i = 0; i < members.size(); ++i)
+                send(members[i]->getFd(), modeMsg.c_str(), modeMsg.size(), 0);
         }
         else if (c == 'l') // Set/remove user limit
         {
@@ -584,18 +661,17 @@ void CommandHandler::cmdMode(Client* client, const std::vector<std::string>& arg
                 }
                 int limit = atoi(args[argIndex++].c_str());
                 ch->setLimit(limit);
-                std::stringstream ss;
-    		    ss << "Channel " << channelName << " limit set to " << limit << "\r\n";
-    		    std::string msg = ss.str();
-
-    		    send(client->getFd(), msg.c_str(), msg.size(), 0);
+                std::string modeMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost MODE " + channelName + " " + (enable ? "+" : "-") + c + "\r\n";
+                const std::vector<Client*>& members = ch->getClients();
+                for (size_t i = 0; i < members.size(); ++i)
+                    send(members[i]->getFd(), modeMsg.c_str(), modeMsg.size(), 0);
             }
             else
-            {
                 ch->setLimit(0);
-                std::string msg = "Channel " + channelName + " limit removed\r\n";
-                send(client->getFd(), msg.c_str(), msg.size(), 0);
-            }
+            std::string modeMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost MODE " + channelName + " " + (enable ? "+" : "-") + c + "\r\n";
+            const std::vector<Client*>& members = ch->getClients();
+            for (size_t i = 0; i < members.size(); ++i)
+                send(members[i]->getFd(), modeMsg.c_str(), modeMsg.size(), 0);
         }
         else
         {
@@ -615,7 +691,7 @@ void CommandHandler::cmdMode(Client* client, const std::vector<std::string>& arg
 void CommandHandler::sendWelcome(Client* client)
 {
     client->setRegistered(true);
-    std::string msg = "001 " + client->getNickname() + " :Welcome to the IRC server!\r\n";
+    std::string msg = ":ircserv 001 " + client->getNickname() + " :Welcome to the Internet Relay Network\r\n";
     send(client->getFd(), msg.c_str(), msg.size(), 0);
 }
 

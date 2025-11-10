@@ -2,7 +2,7 @@
 #include <algorithm>
 
 
-// 
+//
 Channel::Channel() : _name("") {}
 Channel::Channel(const std::string& name) : _name(name), _topic(""), _modeI(false), _modeT(false), _limit(0), _key("") {}
 Channel::Channel(const Channel& other) { *this = other; }
@@ -50,12 +50,12 @@ void Channel::removeClient(Client* client)
         if (*i == client)
         {
             _clients.erase(i);
+            removeOperator(client);
+            removeInvited(client);
             return;
         }
         ++i;
     }
-	removeOperator(client);
-    removeInvited(client);
 }
 
 // Checks if a client is already in channel
@@ -171,4 +171,9 @@ void Channel::setLimit(int limit)
 size_t Channel::getLimit() const
 {
     return _limit;
+}
+
+bool Channel::isEmpty() const
+{
+	return _clients.empty();
 }

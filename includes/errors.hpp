@@ -3,6 +3,7 @@
 
 #define ERR_NOSUCHNICK "401 :No such nick/channel\r\n"
 #define ERR_NOSUCHCHANNEL ":403 No such channel\r\n"
+#define ERR_CANNOTSENDTOCHAN "404 :Cannot send to channel\r\n"
 #define ERR_UNKNOWNCOMMAND "421 :Unknown command\r\n"
 #define ERR_NONICKNAMEGIVEN "431 :No nickname given\r\n"
 #define ERR_ERRONEUSNICKNAME "432 :Erroneous nickname\r\n"

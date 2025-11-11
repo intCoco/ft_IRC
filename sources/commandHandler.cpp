@@ -209,6 +209,8 @@ void CommandHandler::cmdNick(Client* client, const std::vector<std::string>& arg
                 i++;
             }
             client->setNickname(newNick);
+            std::string msg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost NICK :" + newNick + "\r\n";
+            send(client->getFd(), msg.c_str(), msg.size(), 0);
         }
         _server->printClients();
         return;

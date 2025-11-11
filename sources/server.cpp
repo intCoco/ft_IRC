@@ -6,7 +6,7 @@
 /*   By: chuchard <chuchard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 23:07:37 by nihamdan          #+#    #+#             */
-/*   Updated: 2025/11/11 00:38:11 by chuchard         ###   ########.fr       */
+/*   Updated: 2025/11/11 14:44:33 by chuchard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -140,7 +140,7 @@ void Server::dropClient(int fd)
 
 void Server::handleReadable(int fd)
 {
-    std::cout << "line" << std::endl;
+    // std::cout << "line" << std::endl;
     Client* cl = NULL;
     for (size_t i = 0; i < _clients.size(); ++i)
 	{

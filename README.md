@@ -1,7 +1,7 @@
 <h1 align="center">ft_irc</h1>
 
 <p align="center">
-	<b>💬 <i>A fully functional IRC (Internet Relay Chat) server implemented in C.</i></b><br>
+	<b>💬 <i>A fully functional IRC (Internet Relay Chat) server implemented in C++.</i></b><br>
 </p>
 
 <p align="center">

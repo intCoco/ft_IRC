@@ -58,19 +58,19 @@ It demonstrates a deep understanding of network programming, socket management, 
 ### How to run the server:
 
 1. Build the project:  
-  ```bash
-  make
-  ```
+	```bash
+	make
+	```
 
-1. Start the server:
-  ```bash
-  ./ircserv <port> <password>
-  ```
+2. Start the server:
+	```bash
+	./ircserv <port> <password>
+	```
 
 > Example:
->  ```bash
->  ./ircserv 6667 mysecretpassword
->  ```
+> ```bash
+> ./ircserv 6667 mysecretpassword
+> ```
 
 3. Connect with any IRC client using the same port and password.
 

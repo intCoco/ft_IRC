@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img alt="Language" src="https://img.shields.io/badge/Language-C-blue"/>
+  <img alt="Language" src="https://img.shields.io/badge/Language-C++-blue"/>
   <img alt="Status" src="https://img.shields.io/badge/Status-Completed-success"/>
   <img src="https://img.shields.io/badge/Grade-100%2F100-success"/>
   <img alt="42" src="https://img.shields.io/badge/School-42-black"/>
